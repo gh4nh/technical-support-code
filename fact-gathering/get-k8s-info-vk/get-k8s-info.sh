@@ -130,15 +130,22 @@ else
     echo;echo "ERROR: Neither 'kubectl' or 'oc' are installed in PATH." | tee -a $logfile
     cleanUp 1
 fi
-if ! $KUBECTLCMD get namespaces > /dev/null 2>> $logfile; then
-    $KUBECTLCMD get namespaces > /dev/null
+
+# Check if k8s is OpenShift
+if $KUBECTLCMD api-resources 2>> $logfile | grep project.openshift.io > /dev/null; then 
+    isOpenShift='true'
+    NS_OR_PROJECT=project
+else 
+    isOpenShift='false'
+    NS_OR_PROJECT=namespace
+fi
+
+if ! $KUBECTLCMD get ${NS_OR_PROJECT} > /dev/null 2>> $logfile; then
+    $KUBECTLCMD get ${NS_OR_PROJECT} > /dev/null
     echo -e "\nERROR: Error while executing '$KUBECTLCMD' commands. Make sure you're able to use '$KUBECTLCMD' against the kubernetes cluster before running this script." | tee -a $logfile
     cleanUp 1
 fi
 
-# Check if k8s is OpenShift
-if $KUBECTLCMD api-resources 2>> $logfile | grep project.openshift.io > /dev/null; then isOpenShift='true'
-else isOpenShift='false';fi
 
 # Initialize Variables
 POSTGRES=true
@@ -1265,7 +1272,7 @@ function captureDiagramToolFiles {
     createTask "$KUBECTLCMD get events --all-namespaces -o json" "$TEMPDIR/.diagram-tool/events.txt"
     createTask "$KUBECTLCMD get ingresses --all-namespaces -o json" "$TEMPDIR/.diagram-tool/ingress.txt"
     createTask "$KUBECTLCMD get jobs --all-namespaces -o json" "$TEMPDIR/.diagram-tool/jobs.txt"
-    createTask "$KUBECTLCMD get namespaces -o json" "$TEMPDIR/.diagram-tool/namespaces.txt"
+    createTask "$KUBECTLCMD get $NS_OR_PROJECT -o json" "$TEMPDIR/.diagram-tool/namespaces.txt"
     createTask "$KUBECTLCMD get nodes -o json" "$TEMPDIR/.diagram-tool/nodes.txt"
     createTask "$KUBECTLCMD get persistentvolumeclaims --all-namespaces -o json" "$TEMPDIR/.diagram-tool/pvcs.txt"
     createTask "$KUBECTLCMD get persistentvolumes -o json" "$TEMPDIR/.diagram-tool/pvs.txt"
